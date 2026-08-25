@@ -10,6 +10,7 @@ import MyComplaints from "../pages/citizen/MyComplaints";
 import TrackFIR from "../pages/citizen/TrackFIR";
 import Profile from "../pages/citizen/Profile";
 import HelpSupport from "../pages/citizen/HelpSupport";
+import NearbyStation from "../pages/citizen/NearbyStation";
 
 export default function AppRoutes() {
   return (
@@ -24,6 +25,7 @@ export default function AppRoutes() {
       <Route path="/track-fir/:id" element={<TrackFIR />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/help" element={<HelpSupport />} />
+      <Route path="/nearby-stations" element={<NearbyStation />} />
     </Routes>
   );
 }
