@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { useState } from "react";
+import { useState,type FormEvent } from "react";
 import { ArrowLeft, Eye, EyeOff, User, Phone, Mail, Lock, AlertCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
