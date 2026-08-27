@@ -1,4 +1,3 @@
-// src/routes/AppRoutes.tsx
 import { Routes, Route } from "react-router";
 import Welcome from "../pages/onboarding/Welcome";
 import ChooseLanguage from "../pages/onboarding/ChooseLanguage";
@@ -11,6 +10,12 @@ import TrackFIR from "../pages/citizen/TrackFIR";
 import Profile from "../pages/citizen/Profile";
 import HelpSupport from "../pages/citizen/HelpSupport";
 import NearbyStation from "../pages/citizen/NearbyStation";
+import PoliceDashboard from "../pages/police/PoliceDashboard";
+import ComplaintDetail from "../pages/police/ComplaintDetail";
+import ManageComplaints from "../pages/police/ManageComplaints";
+import Analytics from "../pages/police/Analytics";
+import PoliceSettings from "../pages/police/PoliceSettings";
+import FIRManagement from "../pages/police/FIRManagement";
 
 export default function AppRoutes() {
   return (
@@ -26,6 +31,12 @@ export default function AppRoutes() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/help" element={<HelpSupport />} />
       <Route path="/nearby-stations" element={<NearbyStation />} />
+      <Route path="/police/dashboard" element={<PoliceDashboard />} />
+      <Route path="/police/complaints/:id" element={<ComplaintDetail />} />
+      <Route path="/police/complaints" element={<ManageComplaints />} />
+      <Route path="/police/analytics" element={<Analytics />} />
+      <Route path="/police/settings" element={<PoliceSettings />} />
+      <Route path="/police/fir-management" element={<FIRManagement />} />
     </Routes>
   );
 }
