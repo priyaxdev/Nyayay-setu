@@ -10,15 +10,15 @@ import {
   LogOut,
   MessageSquare,
   Mic,
-  Globe,
   Check,
   Circle,
   ArrowRight,
-  ShieldCheck,
+  MapPin,
   Clock,
 } from "lucide-react";
 import { fetchMyComplaints, type Complaint } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import LanguageSelector from "../../components/ui/LanguageSelector";
 
 const defaultSteps = [
   { label: "Complaint Submitted" },
@@ -129,10 +129,7 @@ export default function CitizenDashboard() {
               Submit your complaint in the way you are comfortable with.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg px-3 py-2 self-start sm:self-auto shadow-xs">
-            <Globe size={16} className="text-green-800" />
-            <span className="font-medium text-xs">English / हिंदी</span>
-          </div>
+          <LanguageSelector />
         </div>
 
         {/* Action cards */}
@@ -166,19 +163,17 @@ export default function CitizenDashboard() {
           </button>
 
           <button
-            onClick={() => navigate("/my-complaints")}
-            className="bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-green-700 transition shadow-xs group cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center mb-3 transition text-amber-700">
-              <ShieldCheck size={22} />
-            </div>
-            <p className="font-bold text-slate-800 group-hover:text-green-900 transition">
-              Track FIR Status
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Check live officer review & FIR progress
-            </p>
-          </button>
+  onClick={() => navigate("/nearby-stations")}
+  className="bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-green-700 transition shadow-xs group cursor-pointer"
+>
+  <div className="w-12 h-12 rounded-xl bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center mb-3 transition text-amber-700">
+    <MapPin size={22} />
+  </div>
+  <p className="font-bold text-slate-800 group-hover:text-green-900 transition">
+    Nearby Police Stations
+  </p>
+  <p className="text-xs text-slate-500 mt-1">Find the closest station for help</p>
+</button>
         </div>
 
         {/* FIR status tracker */}
