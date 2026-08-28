@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Landmark, Phone } from "lucide-react";
-import logo from "../../assets/logo.png"; 
+import logo from "../../assets/logo.png";
 
 export default function Welcome() {
   const navigate = useNavigate();
@@ -24,8 +24,12 @@ export default function Welcome() {
               className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
             />
             <div>
-              <p className="font-bold text-slate-900 text-lg leading-none">Nyayay Setu</p>
-              <p className="text-xs text-slate-500 mt-1">Citizen · Police · Safety</p>
+              <p className="font-bold text-slate-900 text-lg leading-none">
+                Nyayay Setu
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Citizen · Police · Safety
+              </p>
             </div>
           </div>
 
@@ -35,8 +39,8 @@ export default function Welcome() {
             <span className="text-orange-700">You</span>
           </h1>
           <p className="text-base text-slate-600 mb-6 leading-relaxed">
-            Report incidents, track FIR status, and help us build a safer society
-            with the power of AI.
+            Report incidents, track FIR status, and help us build a safer
+            society with the power of AI.
           </p>
 
           {/* Illustration - phone only, no police station */}
@@ -46,7 +50,9 @@ export default function Welcome() {
                 <Landmark className="text-white" size={24} />
               </div>
               <p className="text-xs text-slate-700 font-medium text-center leading-tight">
-                Your Voice<br />Matters
+                Your Voice
+                <br />
+                Matters
               </p>
             </div>
           </div>
@@ -65,6 +71,15 @@ export default function Welcome() {
             >
               I already have an account
             </button>
+            <p className="text-center text-xs text-slate-400 mt-3">
+              Are you a police officer?{" "}
+              <button
+                onClick={() => navigate("/police/login")}
+                className="text-blue-800 font-semibold underline cursor-pointer"
+              >
+                Login here
+              </button>
+            </p>
           </div>
 
           {/* Language selector */}
@@ -78,7 +93,8 @@ export default function Welcome() {
           <div className="flex items-center justify-center gap-2 bg-orange-100 rounded-lg py-3">
             <Phone className="text-orange-700" size={16} />
             <p className="text-sm text-slate-800">
-              Emergency helpline: <span className="font-bold text-orange-800">100 / 112</span>
+              Emergency helpline:{" "}
+              <span className="font-bold text-orange-800">100 / 112</span>
             </p>
           </div>
         </div>

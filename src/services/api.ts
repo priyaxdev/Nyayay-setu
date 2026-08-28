@@ -132,6 +132,8 @@ export function signupApi(params: {
   phone?: string;
   password?: string;
   role?: 'CITIZEN' | 'POLICE';
+  badgeNumber?: string;
+  station?: string;
 }): Promise<{ success: boolean; message: string; user: User; token: string }> {
   return request('/auth/signup', {
     method: 'POST',
@@ -139,10 +141,7 @@ export function signupApi(params: {
   });
 }
 
-export function loginApi(params: {
-  email: string;
-  password?: string;
-}): Promise<{ success: boolean; message: string; user: User; token: string }> {
+export async function loginApi(params: { email: string; password?: string; role?: 'CITIZEN' | 'POLICE' }): Promise<{ success: boolean; message: string; user: User; token: string }> {
   return request('/auth/login', {
     method: 'POST',
     body: JSON.stringify(params),
