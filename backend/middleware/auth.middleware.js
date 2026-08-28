@@ -48,6 +48,38 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
   next();
 });
 
+export const optionalAuthMiddleware = asyncHandler(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) return next();
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return next();
+
+  try {
+    const decoded = jwt.verify(token, secret);
+    const user = await User.findById(decoded.id).select('-password');
+    if (user) {
+      req.user = {
+        id: user._id.toString(),
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      };
+    }
+  } catch {
+    // If token is invalid or expired, continue as guest/unauthenticated
+  }
+
+  next();
+});
+
 export function requireRole(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user) {

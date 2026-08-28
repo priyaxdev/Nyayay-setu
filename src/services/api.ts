@@ -186,6 +186,19 @@ export function fetchComplaintById(complaintId: string): Promise<{ success: bool
   return request<{ success: boolean; complaint: Complaint }>(`/complaints/${encodeURIComponent(complaintId)}`);
 }
 
+export function updateComplaintStatusApi(
+  complaintId: string,
+  status: string
+): Promise<{ success: boolean; complaint: Complaint }> {
+  return request<{ success: boolean; complaint: Complaint }>(
+    `/complaints/${encodeURIComponent(complaintId)}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }
+  );
+}
+
 export function checkHealth(): Promise<{ success: boolean; message: string }> {
   return request<{ success: boolean; message: string }>('/health');
 }

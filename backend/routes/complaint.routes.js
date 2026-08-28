@@ -5,24 +5,17 @@ import {
   getComplaint,
   patchComplaintStatus,
 } from '../controllers/complaint.controller.js';
-import { authMiddleware } from '../middleware/auth.middleware.js';
+import { authMiddleware, optionalAuthMiddleware, requireRole } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
 
-// All complaint routes are protected by JWT auth
-router.use(authMiddleware);
+// POST /api/complaints - Allows both authenticated users & new/guest submissions
+router.post('/', optionalAuthMiddleware, asyncHandler(submitComplaint));
 
-// POST /api/complaints
-router.post('/', asyncHandler(submitComplaint));
-
-// GET /api/complaints
-router.get('/', asyncHandler(listMyComplaints));
-
-// GET /api/complaints/:complaintId
-router.get('/:complaintId', asyncHandler(getComplaint));
-
-// PATCH /api/complaints/:complaintId/status
-router.patch('/:complaintId/status', asyncHandler(patchComplaintStatus));
+// Protected routes (require JWT authentication)
+router.get('/', authMiddleware, asyncHandler(listMyComplaints));
+router.get('/:complaintId', authMiddleware, asyncHandler(getComplaint));
+router.patch('/:complaintId/status', authMiddleware, requireRole('POLICE'), asyncHandler(patchComplaintStatus));
 
 export default router;

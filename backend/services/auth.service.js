@@ -55,7 +55,7 @@ export async function signupUser({ name, email, phone, password, role = 'CITIZEN
   return { user: safeUser, token };
 }
 
-export async function loginUser({ email, password }) {
+export async function loginUser({ email, password, role = 'CITIZEN' }) {
   if (!email || !password) {
     throw new ApiError(400, 'Email and password are required.');
   }
@@ -71,6 +71,22 @@ export async function loginUser({ email, password }) {
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     throw new ApiError(401, 'Invalid email or password.');
+  }
+
+  // Strict role validation based on portal / requested role
+  const expectedRole = (role || 'CITIZEN').toUpperCase();
+  const userRole = (user.role || 'CITIZEN').toUpperCase();
+
+  if (expectedRole === 'CITIZEN' && userRole === 'POLICE') {
+    throw new ApiError(403, 'Police accounts must log in through the Police Login portal.');
+  }
+
+  if (expectedRole === 'POLICE' && userRole === 'CITIZEN') {
+    throw new ApiError(403, 'Citizen accounts cannot log in through the Police Login portal.');
+  }
+
+  if (expectedRole !== userRole) {
+    throw new ApiError(403, `Access denied for role ${userRole}.`);
   }
 
   const token = generateToken(user);
