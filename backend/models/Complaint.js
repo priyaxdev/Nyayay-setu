@@ -9,6 +9,9 @@ export const COMPLAINT_STATUSES = [
   'OFFICER_VERIFICATION',
   'FIR_REGISTERED',
   'CLOSED',
+  'ASSIGNED',
+  'INVESTIGATING',
+  'RESOLVED',
 ];
 
 const PersonSchema = new Schema(

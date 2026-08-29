@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -15,75 +16,143 @@ import {
   Bot,
   Sparkles,
   ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { fetchMyComplaints, type Complaint } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
-const stats = [
-  { label: "Total Complaints", value: "1,520", change: "+12%", note: "This Month" },
-  { label: "Under Review", value: "450", change: "+8%", note: "Pending" },
-  { label: "FIR Drafted", value: "210", change: "+10%", note: "This Month" },
-  { label: "FIR Registered", value: "320", change: "+15%", note: "This Month" },
-  { label: "Closed Cases", value: "750", change: "+9%", note: "This Month" },
-];
-
-const complaintsByType = [
-  { name: "Theft", value: 420, color: "#1e3a8a" },
-  { name: "Assault", value: 310, color: "#2563eb" },
-  { name: "Harassment", value: 250, color: "#f59e0b" },
-  { name: "Fraud", value: 190, color: "#0d9488" },
-  { name: "Others", value: 350, color: "#94a3b8" },
-];
-
-const trendData = [
-  { date: "1 May", value: 60 },
-  { date: "8 May", value: 90 },
-  { date: "15 May", value: 75 },
-  { date: "22 May", value: 130 },
-  { date: "31 May", value: 160 },
-];
-
-const topReasons = [
-  { label: "Vehicle Theft", value: 180 },
-  { label: "Mobile Snatching", value: 150 },
-  { label: "Physical Assault", value: 120 },
-  { label: "Cyber Fraud", value: 100 },
-  { label: "Public Harassment", value: 80 },
-];
-
-const recentComplaints = [
-  { id: "CMP12345", complainant: "Rohit Sharma", type: "Theft", location: "Lajpat Nagar, Delhi", status: "Under Review", date: "18 May 2026" },
-  { id: "CMP12346", complainant: "Anjali Verma", type: "Assault", location: "Karol Bagh, Delhi", status: "FIR Drafted", date: "18 May 2026" },
-  { id: "CMP12347", complainant: "Mohit Kumar", type: "Harassment", location: "Patel Nagar, Delhi", status: "Submitted", date: "17 May 2026" },
-  { id: "CMP12348", complainant: "Neha Singh", type: "Fraud", location: "Dwarka, Delhi", status: "FIR Registered", date: "17 May 2026" },
-  { id: "CMP12349", complainant: "Suresh Yadav", type: "Theft", location: "Rohini, Delhi", status: "Closed", date: "16 May 2026" },
-];
-
 const statusStyles: Record<string, string> = {
-  "Under Review": "bg-blue-100 text-blue-800",
-  "FIR Drafted": "bg-amber-100 text-amber-800",
+  SUBMITTED: "bg-slate-100 text-slate-700",
   Submitted: "bg-slate-100 text-slate-700",
+  UNDER_REVIEW: "bg-blue-100 text-blue-800",
+  "Under Review": "bg-blue-100 text-blue-800",
+  INVESTIGATING: "bg-blue-100 text-blue-800",
+  ASSIGNED: "bg-blue-100 text-blue-800",
+  FIR_DRAFT_GENERATED: "bg-amber-100 text-amber-800",
+  "FIR Drafted": "bg-amber-100 text-amber-800",
+  "FIR Draft Generated": "bg-amber-100 text-amber-800",
+  OFFICER_VERIFICATION: "bg-orange-100 text-orange-800",
+  "Officer Verification": "bg-orange-100 text-orange-800",
+  FIR_REGISTERED: "bg-green-100 text-green-800",
   "FIR Registered": "bg-green-100 text-green-800",
+  CLOSED: "bg-emerald-100 text-emerald-800",
   Closed: "bg-emerald-100 text-emerald-800",
+  RESOLVED: "bg-emerald-100 text-emerald-800",
 };
+
+const pieColors = ["#1e3a8a", "#2563eb", "#f59e0b", "#0d9488", "#7c3aed", "#94a3b8"];
 
 export default function PoliceDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchMyComplaints();
+      setComplaints(res.complaints || []);
+    } catch (err) {
+      console.warn("Could not load complaints for police dashboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/police/login");
   };
 
   const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/police/dashboard" },
-  { icon: ClipboardList, label: "Complaints", path: "/police/complaints" },
-  { icon: FolderCheck, label: "FIR Management", path: "/police/fir-management" },
-  { icon: BarChart3, label: "Analytics", path: "/police/analytics" },
-  { icon: SettingsIcon, label: "Settings", path: "/police/settings" },
-];
+    { icon: LayoutDashboard, label: "Dashboard", path: "/police/dashboard" },
+    { icon: ClipboardList, label: "Complaints", path: "/police/complaints" },
+    { icon: FolderCheck, label: "FIR Management", path: "/police/fir-management" },
+    { icon: BarChart3, label: "Analytics", path: "/police/analytics" },
+    { icon: SettingsIcon, label: "Settings", path: "/police/settings" },
+  ];
+
+  // Dynamic stats calculated from real MongoDB records
+  const totalCount = complaints.length;
+  const underReviewCount = complaints.filter(
+    (c) =>
+      c.status === "UNDER_REVIEW" ||
+      c.status === "Under Review" ||
+      c.status === "INVESTIGATING" ||
+      c.status === "ASSIGNED"
+  ).length;
+  const firDraftedCount = complaints.filter(
+    (c) =>
+      c.status === "FIR_DRAFT_GENERATED" ||
+      c.status === "FIR Drafted" ||
+      c.status === "FIR Draft Generated" ||
+      c.status === "OFFICER_VERIFICATION"
+  ).length;
+  const firRegisteredCount = complaints.filter(
+    (c) => c.status === "FIR_REGISTERED" || c.status === "FIR Registered"
+  ).length;
+  const closedCount = complaints.filter(
+    (c) => c.status === "CLOSED" || c.status === "Closed" || c.status === "RESOLVED"
+  ).length;
+
+  const dynamicStats = [
+    { label: "Total Complaints", value: totalCount.toString(), change: `${totalCount} records`, note: "In Database" },
+    { label: "Under Review", value: underReviewCount.toString(), change: `${underReviewCount} pending`, note: "Active cases" },
+    { label: "FIR Drafted", value: firDraftedCount.toString(), change: `${firDraftedCount} ready`, note: "Needs review" },
+    { label: "FIR Registered", value: firRegisteredCount.toString(), change: `${firRegisteredCount} active`, note: "Registered" },
+    { label: "Closed Cases", value: closedCount.toString(), change: `${closedCount} resolved`, note: "Completed" },
+  ];
+
+  // Dynamic incident types
+  const typeMap: Record<string, number> = {};
+  complaints.forEach((c) => {
+    const t = c.incidentType || "General Incident";
+    typeMap[t] = (typeMap[t] || 0) + 1;
+  });
+
+  const dynamicTypes = Object.entries(typeMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, value], i) => ({
+      name,
+      value,
+      color: pieColors[i % pieColors.length],
+    }));
+
+  const chartTypes = dynamicTypes.length > 0 ? dynamicTypes : [
+    { name: "Complaints", value: 1, color: "#1e3a8a" },
+  ];
+
+  const topReasonsList = Object.entries(typeMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([label, value]) => ({ label, value }));
+
+  const trendMap: Record<string, number> = {};
+  complaints.forEach((c) => {
+    const d = c.createdAt
+      ? new Date(c.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+      : c.date || "Recent";
+    trendMap[d] = (trendMap[d] || 0) + 1;
+  });
+
+  const dynamicTrend = Object.entries(trendMap)
+    .slice(-5)
+    .map(([date, value]) => ({ date, value }));
+
+  const trendData = dynamicTrend.length >= 2 ? dynamicTrend : [
+    { date: "Start", value: Math.max(1, Math.floor(totalCount / 2)) },
+    { date: "Current", value: totalCount },
+  ];
+
+  const recentList = complaints.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-slate-100 flex">
@@ -126,19 +195,22 @@ export default function PoliceDashboard() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-1">Overview of Complaints</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Live Overview of Citizen Complaints in MongoDB
+            </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <button className="flex items-center gap-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg px-3.5 py-2 shadow-xs cursor-pointer">
-              <Filter size={15} />
-              01 May 2026 - 31 May 2026
-            </button>
-            <button className="w-9 h-9 rounded-lg bg-white border border-slate-300 flex items-center justify-center text-slate-500 shadow-xs cursor-pointer">
-              <Bell size={16} />
+            <button
+              onClick={loadData}
+              title="Refresh database records"
+              className="flex items-center gap-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg px-3.5 py-2 shadow-xs hover:bg-slate-50 transition cursor-pointer"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+              Refresh Data
             </button>
             <div className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-lg pl-1.5 pr-3.5 py-1.5 shadow-xs">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-bold text-xs">
-                {(user?.name || "Inspector A")
+                {(user?.name || "Officer")
                   .split(" ")
                   .map((n) => n[0])
                   .join("")
@@ -147,7 +219,7 @@ export default function PoliceDashboard() {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-800 leading-none">
-                  {user?.name || "Inspector A. Kumar"}
+                  {user?.name || "Police Officer"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-0.5">Delhi Police</p>
               </div>
@@ -157,15 +229,11 @@ export default function PoliceDashboard() {
 
         {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {stats.map((s) => (
+          {dynamicStats.map((s) => (
             <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
               <p className="text-xs text-slate-500">{s.label}</p>
               <div className="flex items-center gap-2 mt-1">
                 <p className="text-2xl font-bold text-slate-900">{s.value}</p>
-                <span className="text-xs font-semibold text-green-600 flex items-center gap-0.5">
-                  <TrendingUp size={12} />
-                  {s.change}
-                </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">{s.note}</p>
             </div>
@@ -182,13 +250,13 @@ export default function PoliceDashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={complaintsByType}
+                      data={chartTypes}
                       dataKey="value"
                       innerRadius={28}
                       outerRadius={50}
                       paddingAngle={2}
                     >
-                      {complaintsByType.map((entry, i) => (
+                      {chartTypes.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
@@ -196,17 +264,17 @@ export default function PoliceDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="space-y-1.5 flex-1">
-                {complaintsByType.map((c) => {
-                  const total = complaintsByType.reduce((sum, x) => sum + x.value, 0);
+              <div className="space-y-1.5 flex-1 max-h-36 overflow-y-auto">
+                {chartTypes.map((c) => {
+                  const total = chartTypes.reduce((sum, x) => sum + x.value, 0) || 1;
                   const pct = Math.round((c.value / total) * 100);
                   return (
                     <div key={c.name} className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5 text-slate-600">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
-                        {c.name}
+                      <span className="flex items-center gap-1.5 text-slate-600 truncate max-w-[110px]" title={c.name}>
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
+                        <span className="truncate">{c.name}</span>
                       </span>
-                      <span className="font-semibold text-slate-800">
+                      <span className="font-semibold text-slate-800 flex-shrink-0">
                         {c.value} <span className="text-slate-400">· {pct}%</span>
                       </span>
                     </div>
@@ -233,14 +301,18 @@ export default function PoliceDashboard() {
 
           {/* Top reasons */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-            <h2 className="text-sm font-bold text-slate-800 mb-3">Top Reasons</h2>
+            <h2 className="text-sm font-bold text-slate-800 mb-3">Top Incident Types</h2>
             <div className="space-y-2.5">
-              {topReasons.map((r) => (
-                <div key={r.label} className="flex items-center justify-between text-xs">
-                  <span className="text-slate-600">{r.label}</span>
-                  <span className="font-bold text-slate-800">{r.value}</span>
-                </div>
-              ))}
+              {topReasonsList.length === 0 ? (
+                <p className="text-xs text-slate-400">No records yet.</p>
+              ) : (
+                topReasonsList.map((r) => (
+                  <div key={r.label} className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 truncate max-w-[160px]">{r.label}</span>
+                    <span className="font-bold text-slate-800">{r.value}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -248,7 +320,15 @@ export default function PoliceDashboard() {
         {/* Recent complaints + quick access */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs overflow-x-auto">
-            <h2 className="text-sm font-bold text-slate-800 mb-4">Recent Complaints</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-slate-800">Recent Complaints</h2>
+              <button
+                onClick={() => navigate("/police/complaints")}
+                className="text-xs font-semibold text-blue-800 hover:text-blue-950 transition cursor-pointer"
+              >
+                View All ({complaints.length})
+              </button>
+            </div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-slate-400 text-left border-b border-slate-100">
@@ -262,28 +342,47 @@ export default function PoliceDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentComplaints.map((c) => (
-                  <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition">
-                    <td className="py-3 font-mono font-semibold text-slate-800">{c.id}</td>
-                    <td className="py-3 text-slate-600">{c.complainant}</td>
-                    <td className="py-3 text-slate-600">{c.type}</td>
-                    <td className="py-3 text-slate-500">{c.location}</td>
-                    <td className="py-3">
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusStyles[c.status]}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="py-3 text-slate-400">{c.date}</td>
-                    <td className="py-3">
-                      <button
-                        onClick={() => navigate(`/police/complaints/${c.id}`)}
-                        className="text-slate-400 hover:text-blue-800 transition cursor-pointer"
-                      >
-                        <Eye size={15} />
-                      </button>
+                {recentList.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-slate-400">
+                      {loading ? "Loading complaints..." : "No complaints found."}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  recentList.map((c) => {
+                    const complainantName =
+                      c.victimName ||
+                      c.victim?.name ||
+                      (c.user && typeof c.user === "object" ? c.user.name : null) ||
+                      "Citizen Complainant";
+                    const displayDate = c.date || (c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Recent");
+                    const statusLabel = c.status.replace(/_/g, " ");
+
+                    return (
+                      <tr key={c.complaintId} className="border-b border-slate-50 hover:bg-slate-50/60 transition">
+                        <td className="py-3 font-mono font-semibold text-slate-800">{c.complaintId}</td>
+                        <td className="py-3 text-slate-600">{complainantName}</td>
+                        <td className="py-3 text-slate-600 capitalize">{c.incidentType || "General"}</td>
+                        <td className="py-3 text-slate-500 truncate max-w-[120px]">{c.location || "Delhi"}</td>
+                        <td className="py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusStyles[c.status] || "bg-slate-100 text-slate-700"}`}>
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td className="py-3 text-slate-400">{displayDate}</td>
+                        <td className="py-3">
+                          <button
+                            onClick={() => navigate(`/police/complaints/${c.complaintId}`)}
+                            className="text-slate-400 hover:text-blue-800 transition cursor-pointer"
+                            title="Review Complaint"
+                          >
+                            <Eye size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

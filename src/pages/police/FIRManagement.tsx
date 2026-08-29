@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const registeredFIRs = [
   { id: "CMP12348", complainant: "Neha Singh", type: "Fraud", location: "Dwarka, Delhi", status: "FIR Registered", officer: "Insp. R. Verma", date: "17 May 2026" },
@@ -32,8 +33,14 @@ const filters = ["All", "FIR Registered", "Closed"];
 export default function FIRManagement() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+
+  const handleLogout = () => {
+    logout();
+    navigate("/police/login");
+  };
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/police/dashboard" },
@@ -77,7 +84,7 @@ export default function FIRManagement() {
           ))}
         </nav>
         <button
-          onClick={() => navigate("/login")}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-6 py-4 text-sm text-blue-200 border-t border-blue-900 hover:text-white transition cursor-pointer"
         >
           <LogOut size={18} />

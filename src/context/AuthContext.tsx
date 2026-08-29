@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 import {
   signupApi,
   loginApi,
@@ -10,20 +16,26 @@ import {
   setStoredUser,
   removeStoredUser,
   type User,
-} from '../services/api';
+} from "../services/api";
 
 type AuthContextType = {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password?: string) => Promise<User>;
+  login: (
+    email: string,
+    password?: string,
+    role?: "CITIZEN" | "POLICE",
+  ) => Promise<User>;
   signup: (params: {
     name: string;
     email: string;
     phone?: string;
     password?: string;
-    role?: 'CITIZEN' | 'POLICE';
+    role?: "CITIZEN" | "POLICE";
+    badgeNumber?: string;
+    station?: string;
   }) => Promise<User>;
   logout: () => void;
   refreshUser: () => Promise<User | null>;
@@ -36,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => getAuthToken());
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Validate existing token on mount
   useEffect(() => {
     async function initAuth() {
       const storedToken = getAuthToken();
@@ -44,13 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-
       try {
         const res = await getMeApi();
         setUser(res.user);
         setStoredUser(res.user);
       } catch (err) {
-        console.warn('Session expired or invalid token:', err);
+        console.warn("Session expired or invalid token:", err);
         removeAuthToken();
         removeStoredUser();
         setUser(null);
@@ -59,12 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-
     initAuth();
   }, []);
 
-  const login = async (email: string, password?: string): Promise<User> => {
-    const res = await loginApi({ email, password });
+  const login = async (
+    email: string,
+    password?: string,
+    role?: "CITIZEN" | "POLICE",
+  ): Promise<User> => {
+    const res = await loginApi({ email, password, role });
     setAuthToken(res.token);
     setStoredUser(res.user);
     setToken(res.token);
@@ -77,7 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string;
     phone?: string;
     password?: string;
-    role?: 'CITIZEN' | 'POLICE';
+    role?: "CITIZEN" | "POLICE";
+    badgeNumber?: string;
+    station?: string;
   }): Promise<User> => {
     const res = await signupApi(params);
     setAuthToken(res.token);
@@ -127,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

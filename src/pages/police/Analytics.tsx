@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { useAuth } from "../../context/AuthContext";
 
 const monthlyTrend = [
   { month: "Jan", complaints: 210 },
@@ -65,6 +66,12 @@ const riskStyles: Record<string, string> = {
 export default function Analytics() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/police/login");
+  };
 
   const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/police/dashboard" },
@@ -101,7 +108,7 @@ export default function Analytics() {
           ))}
         </nav>
         <button
-          onClick={() => navigate("/login")}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-6 py-4 text-sm text-blue-200 border-t border-blue-900 hover:text-white transition cursor-pointer"
         >
           <LogOut size={18} />

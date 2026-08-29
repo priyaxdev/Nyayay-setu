@@ -132,6 +132,8 @@ export function signupApi(params: {
   phone?: string;
   password?: string;
   role?: 'CITIZEN' | 'POLICE';
+  badgeNumber?: string;
+  station?: string;
 }): Promise<{ success: boolean; message: string; user: User; token: string }> {
   return request('/auth/signup', {
     method: 'POST',
@@ -139,10 +141,7 @@ export function signupApi(params: {
   });
 }
 
-export function loginApi(params: {
-  email: string;
-  password?: string;
-}): Promise<{ success: boolean; message: string; user: User; token: string }> {
+export async function loginApi(params: { email: string; password?: string; role?: 'CITIZEN' | 'POLICE' }): Promise<{ success: boolean; message: string; user: User; token: string }> {
   return request('/auth/login', {
     method: 'POST',
     body: JSON.stringify(params),
@@ -185,6 +184,19 @@ export function fetchMyComplaints(): Promise<{ success: boolean; complaints: Com
 
 export function fetchComplaintById(complaintId: string): Promise<{ success: boolean; complaint: Complaint }> {
   return request<{ success: boolean; complaint: Complaint }>(`/complaints/${encodeURIComponent(complaintId)}`);
+}
+
+export function updateComplaintStatusApi(
+  complaintId: string,
+  status: string
+): Promise<{ success: boolean; complaint: Complaint }> {
+  return request<{ success: boolean; complaint: Complaint }>(
+    `/complaints/${encodeURIComponent(complaintId)}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }
+  );
 }
 
 export function checkHealth(): Promise<{ success: boolean; message: string }> {

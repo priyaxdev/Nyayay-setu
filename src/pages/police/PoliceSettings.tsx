@@ -24,7 +24,7 @@ export default function PoliceSettings() {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/police/login");
   };
 
   const navItems = [

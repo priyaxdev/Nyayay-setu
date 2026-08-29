@@ -19,10 +19,11 @@ export async function signup(req, res) {
 }
 
 export async function login(req, res) {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
   const { user, token } = await authService.loginUser({
     email,
     password,
+    role: role || req.role,
   });
 
   res.status(200).json({
