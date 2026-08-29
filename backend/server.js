@@ -11,7 +11,16 @@ import { notFound, errorHandler } from './middleware/error.middleware.js';
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://nyayay-setu-six.vercel.app'],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (
+      origin === 'http://localhost:5173' ||
+      /\.vercel\.app$/.test(origin)
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
