@@ -347,23 +347,51 @@ function mockProcessMessage({ message, conversationHistory = [], language }) {
 }
 
 // ---------------------------------------------------------------------
-// Real provider integration point
+// Real provider integration point (Gemini)
 // ---------------------------------------------------------------------
 
+const VALID_STATES = ['COLLECTING', 'READY_FOR_CONFIRMATION'];
+const MAX_TURNS_BEFORE_FORCE_CLOSE = 10; // safety cap so a stuck bot can't loop forever
+
 /**
- * TODO(you): implement this once you're ready to plug in a real model.
- *
- * Must resolve to the same shape the mock returns:
- *   { reply, state, complaintData, missingFields }
- *
- * state must be one of: COLLECTING | READY_FOR_CONFIRMATION
- * (CONFIRMED / SUBMITTED are set elsewhere, not by the AI layer).
- *
- * Do NOT read process.env.OPENAI_API_KEY (or any provider key) anywhere
- * outside this function, and never return it or log it.
+ * Gemini sometimes wraps JSON in ```json ... ``` fences even when we ask
+ * for pure JSON. Strip that before parsing, and never let a parse
+ * failure crash the whole request.
  */
-// eslint-disable-next-line no-unused-vars
+function safeParseAIResponse(rawText) {
+  let cleaned = rawText.trim();
+  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
+  cleaned = cleaned.replace(/```\s*$/i, '');
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.error('Failed to parse AI response as JSON:', cleaned);
+    return null; // caller decides the fallback behaviour
+  }
+}
+
+/**
+ * Detects if the bot is about to ask the EXACT same question it already
+ * asked before — a sign the citizen's answer wasn't understood, or the
+ * model is stuck. We look at the last "model" messages in history.
+ */
+function isRepeatingQuestion(nextQuestion, conversationHistory) {
+  if (!nextQuestion) return false;
+  const priorModelMessages = (conversationHistory || [])
+    .filter((m) => m.role === 'assistant' || m.role === 'model')
+    .map((m) => m.content || (m.parts && m.parts[0]?.text) || '');
+
+  const repeatCount = priorModelMessages.filter(
+    (q) => q.trim().toLowerCase() === nextQuestion.trim().toLowerCase()
+  ).length;
+
+  return repeatCount >= 2; // asked this exact question twice already
+}
+
 async function processWithRealAI({ message, conversationHistory, currentComplaintData, language }) {
+  const totalTurns = (conversationHistory || []).length;
+
   const historyText = (conversationHistory || [])
     .map((m) => `${m.role === 'user' ? 'Citizen' : 'Assistant'}: ${m.content}`)
     .join('\n');
@@ -371,8 +399,10 @@ async function processWithRealAI({ message, conversationHistory, currentComplain
   const prompt = `
 You are an FIR (First Information Report) intake assistant for an Indian
 police complaint system. The citizen may write in Hindi, English, or
-Hinglish — always reply in the same language they are using (language
-code: "${language}").
+Hinglish. ALWAYS reply in the same language/script the citizen is
+currently using in their latest message — if they write in Hindi script,
+reply in Hindi script; if Hinglish, reply in Hinglish; if English, reply
+in English. Do not assume the language from earlier turns if it changed.
 
 Conversation so far:
 ${historyText || '(none yet)'}
@@ -385,17 +415,22 @@ TASK:
 1. Extract facts only from what's explicitly stated. Never invent details.
 2. Merge new information into the existing complaint data (keep old
    values if the new message doesn't mention them).
-3. Decide what important information is still missing for this specific
-   type of incident (this varies by case type — decide based on what
-   actually happened, don't apply a fixed checklist).
-4. If information is missing, ask exactly ONE natural follow-up question
-   (not a form, not multiple questions at once) targeting the single
-   most important gap.
-5. If nothing important is missing, set state to "READY_FOR_CONFIRMATION"
-   and write a short closing message asking the citizen to review the
-   summary below.
+3. If the citizen's message is vague, uncertain, or says something like
+   "I don't know" / "pata nahi" / "not sure" for the CURRENT question,
+   accept that as a final answer (store null or "not specified") and
+   move on to the next missing field. Do NOT ask the same question again.
+4. Decide what important information is still missing for this specific
+   type of incident — this varies by case type, decide based on what
+   actually happened, don't apply a fixed checklist.
+5. If information is missing, ask exactly ONE natural follow-up question
+   targeting the single most important gap. Never repeat a question that
+   was already asked earlier in this conversation.
+6. If nothing important is missing, OR if enough information has been
+   gathered to file a basic complaint even with some gaps, set state to
+   "READY_FOR_CONFIRMATION" and write a short closing message asking the
+   citizen to review the summary below.
 
-Return ONLY valid JSON in this exact shape, nothing else:
+Return ONLY valid JSON, no markdown fences, no extra text, in this exact shape:
 {
   "complaintData": {
     "incidentType": string or null,
@@ -416,17 +451,68 @@ Return ONLY valid JSON in this exact shape, nothing else:
 }
   `.trim();
 
-  const result = await geminiModel.generateContent(prompt);
-  const parsed = JSON.parse(result.response.text());
+  let parsed = null;
+
+  try {
+    const result = await geminiModel.generateContent(prompt);
+    parsed = safeParseAIResponse(result.response.text());
+  } catch (err) {
+    console.error('Gemini API call failed:', err.message);
+    // Graceful fallback instead of crashing the whole request —
+    // the citizen sees a friendly retry message, not a stack trace.
+    return {
+      reply:
+        language === 'hi'
+          ? 'माफ़ कीजिए, अभी तकनीकी समस्या आ रही है। कृपया थोड़ी देर बाद दोबारा कोशिश करें।'
+          : 'Sorry, something went wrong on our end. Please try again in a moment.',
+      state: 'COLLECTING',
+      complaintData: currentComplaintData || {},
+      missingFields: [],
+    };
+  }
+
+  // Parsing failed even after stripping markdown fences.
+  if (!parsed) {
+    return {
+      reply:
+        language === 'hi'
+          ? 'माफ़ कीजिए, आपकी बात समझने में दिक्कत हुई। क्या आप दोबारा बता सकते हैं?'
+          : "Sorry, I had trouble understanding that. Could you rephrase?",
+      state: 'COLLECTING',
+      complaintData: currentComplaintData || {},
+      missingFields: [],
+    };
+  }
+
+  // Validate state — never trust the model blindly on enum fields.
+  let state = VALID_STATES.includes(parsed.state) ? parsed.state : 'COLLECTING';
+
+  // Loop guard: if we're about to ask the same question a 3rd time,
+  // force the conversation forward instead of frustrating the citizen.
+  if (state === 'COLLECTING' && isRepeatingQuestion(parsed.reply, conversationHistory)) {
+    state = 'READY_FOR_CONFIRMATION';
+    parsed.reply =
+      language === 'hi'
+        ? 'ठीक है, जो जानकारी अभी तक मिली है उसकी समीक्षा कर लीजिए और आगे बढ़ें।'
+        : "Okay, let's go with what we have so far — please review the summary below.";
+  }
+
+  // Safety cap — a runaway conversation shouldn't interrogate forever.
+  if (state === 'COLLECTING' && totalTurns >= MAX_TURNS_BEFORE_FORCE_CLOSE) {
+    state = 'READY_FOR_CONFIRMATION';
+    parsed.reply =
+      language === 'hi'
+        ? 'धन्यवाद, अब तक जो जानकारी मिली है उसकी समीक्षा कर लीजिए।'
+        : "Thanks — let's review what we've gathered so far.";
+  }
 
   return {
-    reply: parsed.reply,
-    state: parsed.state,
-    complaintData: parsed.complaintData,
-    missingFields: parsed.missingFields || [],
+    reply: parsed.reply || '',
+    state,
+    complaintData: parsed.complaintData || currentComplaintData || {},
+    missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields : [],
   };
 }
-
 /**
  * Public interface used by chat.controller.js.
  */
