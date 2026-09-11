@@ -214,5 +214,45 @@
   "faq3A": "Contact support using the options below, or reach out to the verifying officer once your complaint reaches the 'Officer Verification' stage.",
   "faq4Q": "Is my personal information kept confidential?",
   "faq4A": "Yes, your details are only accessible to verified police personnel handling your case."
+}, "welcome": {
+  "headingPart1": "A Safer Community Starts with",
+  "headingHighlight": "You",
+  "subtitle": "Report incidents, track FIR status, and help us build a safer society with the power of AI.",
+  "illustrationLine1": "Your Voice",
+  "illustrationLine2": "Matters",
+  "getStarted": "Get Started",
+  "alreadyHaveAccount": "I already have an account",
+  "arePolice": "Are you a police officer?",
+  "loginHere": "Login here"
+},
+"chooseLanguage": {
+  "title": "Choose Your Language",
+  "subtitle": "Select your preferred language",
+  "continue": "Continue",
+  "changeAnytime": "You can change the language anytime from settings."
+}, "nearbyStation": {
+  "title": "Nearby Police Stations",
+  "subtitle": "Find the closest police station for in-person assistance or emergencies.",
+  "detecting": "Detecting your location...",
+  "denied": "Location access denied. Showing default nearby stations.",
+  "retry": "Retry",
+  "granted": "Location detected — showing stations near you.",
+  "getDirections": "Get Directions"
+},
+"policeAuth": {
+  "officerRegistration": "Officer Registration",
+  "registrationSubtitle": "Requires valid badge/service ID for verification",
+  "badgeLabel": "Badge / Service ID",
+  "badgePlaceholder": "e.g. DL-4521",
+  "badgeHelper": "This uniquely identifies you as verified police personnel.",
+  "stationLabel": "Station Name",
+  "optional": "optional",
+  "stationPlaceholder": "e.g. Rajiv Chowk Police Station",
+  "officialEmailLabelForm": "Official Email",
+  "registering": "Registering...",
+  "registerAsOfficer": "Register as Officer",
+  "alreadyRegistered": "Already registered?",
+  "badgeRequiredError": "Badge / Service ID is required for police registration.",
+  "officialEmailRequiredError": "Please enter your official email address."
 }
 }
