@@ -1,3 +1,11 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const geminiModel = genAI.getGenerativeModel({
+  model: 'gemini-3.6-flash',
+  generationConfig: { responseMimeType: 'application/json' },
+});
+
 /**
  * ai.service.js
  * ------------------------------------------------------------------
@@ -356,10 +364,67 @@ function mockProcessMessage({ message, conversationHistory = [], language }) {
  */
 // eslint-disable-next-line no-unused-vars
 async function processWithRealAI({ message, conversationHistory, currentComplaintData, language }) {
-  throw new Error(
-    `AI_PROVIDER="${process.env.AI_PROVIDER}" has no implementation yet. ` +
-      'Implement processWithRealAI() in server/services/ai.service.js.'
-  );
+  const historyText = (conversationHistory || [])
+    .map((m) => `${m.role === 'user' ? 'Citizen' : 'Assistant'}: ${m.content}`)
+    .join('\n');
+
+  const prompt = `
+You are an FIR (First Information Report) intake assistant for an Indian
+police complaint system. The citizen may write in Hindi, English, or
+Hinglish — always reply in the same language they are using (language
+code: "${language}").
+
+Conversation so far:
+${historyText || '(none yet)'}
+
+Citizen's latest message: "${message}"
+
+Current known complaint data (JSON): ${JSON.stringify(currentComplaintData || {})}
+
+TASK:
+1. Extract facts only from what's explicitly stated. Never invent details.
+2. Merge new information into the existing complaint data (keep old
+   values if the new message doesn't mention them).
+3. Decide what important information is still missing for this specific
+   type of incident (this varies by case type — decide based on what
+   actually happened, don't apply a fixed checklist).
+4. If information is missing, ask exactly ONE natural follow-up question
+   (not a form, not multiple questions at once) targeting the single
+   most important gap.
+5. If nothing important is missing, set state to "READY_FOR_CONFIRMATION"
+   and write a short closing message asking the citizen to review the
+   summary below.
+
+Return ONLY valid JSON in this exact shape, nothing else:
+{
+  "complaintData": {
+    "incidentType": string or null,
+    "description": string or null,
+    "date": string or null,
+    "time": string or null,
+    "location": string or null,
+    "victim": object,
+    "accused": object,
+    "witnesses": array,
+    "evidence": array,
+    "stolenItem": string or null,
+    "language": "${language}"
+  },
+  "missingFields": ["field_name", "..."],
+  "reply": "the question or closing message, in the citizen's language",
+  "state": "COLLECTING" or "READY_FOR_CONFIRMATION"
+}
+  `.trim();
+
+  const result = await geminiModel.generateContent(prompt);
+  const parsed = JSON.parse(result.response.text());
+
+  return {
+    reply: parsed.reply,
+    state: parsed.state,
+    complaintData: parsed.complaintData,
+    missingFields: parsed.missingFields || [],
+  };
 }
 
 /**
