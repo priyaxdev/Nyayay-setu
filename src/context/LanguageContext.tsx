@@ -1,140 +1,54 @@
-// import { createContext, useContext, useState, type ReactNode } from "react";
-
-// const languages = [
-//   { code: "en", label: "English" },
-//   { code: "hi", label: "हिंदी" },
-//   { code: "hi-en", label: "Hinglish" },
-//   { code: "bn", label: "বাংলা" },
-//   { code: "mr", label: "मराठी" },
-//   { code: "ta", label: "தமிழ்" },
-// ];
-
-// type LanguageContextType = {
-//   language: string;
-//   setLanguage: (code: string) => void;
-//   languages: typeof languages;
-// };
-
-// const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
-
-// export function LanguageProvider({ children }: { children: ReactNode }) {
-//   const [language, setLanguage] = useState("en");
-//   return (
-//     <LanguageContext.Provider value={{ language, setLanguage, languages }}>
-//       {children}
-//     </LanguageContext.Provider>
-//   );
-// }
-
-// export function useLanguage() {
-//   const ctx = useContext(LanguageContext);
-//   if (!ctx) throw new Error("useLanguage must be used within LanguageProvider");
-//   return ctx;
-// }
-
-// import { createContext, useContext, useState, type ReactNode } from "react";
-// import i18n from "../i18n/locals";
-
-// const languages = [
-//   { code: "en", label: "English", name: "English" },
-//   { code: "hi", label: "हिंदी", name: "Hindi" },
-//   { code: "hi-en", label: "Hinglish", name: "Hinglish" },
-//   { code: "bn", label: "বাংলা", name: "Bengali" },
-//   { code: "mr", label: "मराठी", name: "Marathi" },
-//   { code: "ta", label: "தமிழ்", name: "Tamil" },
-// ];
-
-// type LanguageContextType = {
-//   language: string;
-//   setLanguage: (code: string) => void;
-//   languages: typeof languages;
-// };
-
-// const LanguageContext = createContext<LanguageContextType | undefined>(
-//   undefined
-// );
-
-// export function LanguageProvider({ children }: { children: ReactNode }) {
-//   const [language, setLanguageState] = useState("en");
-
-//   const setLanguage = (code: string) => {
-//     setLanguageState(code);
-
-//     // Change i18next UI language
-//     const i18nCode = code === "hi-en" ? "en" : code;
-//     i18n.changeLanguage(i18nCode);
-
-//     // Save language so it stays after refresh
-//     localStorage.setItem("nyayasetu_language", code);
-//   };
-
-//   return (
-//     <LanguageContext.Provider
-//       value={{
-//         language,
-//         setLanguage,
-//         languages,
-//       }}
-//     >
-//       {children}
-//     </LanguageContext.Provider>
-//   );
-// }
-
-// export function useLanguage() {
-//   const ctx = useContext(LanguageContext);
-
-//   if (!ctx) {
-//     throw new Error("useLanguage must be used within LanguageProvider");
-//   }
-
-//   return ctx;
-// }
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useContext,
   useState,
   type ReactNode,
 } from "react";
-
 import i18n from "../i18n/locals";
 
-const languages = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "हिंदी" },
-  { code: "hi-en", label: "Hinglish" },
-  { code: "bn", label: "বাংলা" },
-  { code: "mr", label: "मराठी" },
-  { code: "ta", label: "தமிழ்" },
+export type LanguageOption = {
+  code: string;
+  label: string;
+  name: string;
+  native: string;
+};
+
+export const languages: LanguageOption[] = [
+  { code: "en", label: "English", name: "English", native: "English" },
+  { code: "hi", label: "हिंदी", name: "Hindi", native: "हिंदी" },
+  { code: "hi-en", label: "Hinglish", name: "Hinglish", native: "हिंग्लिश" },
+  { code: "bn", label: "বাংলা", name: "Bengali", native: "বাংলা" },
+  { code: "mr", label: "मराठी", name: "Marathi", native: "मराठी" },
+  { code: "ta", label: "தமிழ்", name: "Tamil", native: "தமிழ்" },
 ];
 
 type LanguageContextType = {
   language: string;
   setLanguage: (code: string) => void;
-  languages: typeof languages;
+  languages: LanguageOption[];
 };
 
-const LanguageContext =
-  createContext<LanguageContextType | undefined>(
-    undefined
-  );
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [language, setLanguageState] = useState("en");
+const STORAGE_KEY = "nyayasetu_language";
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<string>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && languages.some((l) => l.code === saved)) {
+      const i18nLang = saved === "hi-en" ? "en" : saved;
+      i18n.changeLanguage(i18nLang);
+      return saved;
+    }
+    return "en";
+  });
 
   const setLanguage = (code: string) => {
     setLanguageState(code);
-
-    // Hinglish doesn't have its own JSON file,
-    // so use English UI translations for now.
-    const i18nLanguage =
-      code === "hi-en" ? "en" : code;
-
+    const i18nLanguage = code === "hi-en" ? "en" : code;
     i18n.changeLanguage(i18nLanguage);
+    localStorage.setItem(STORAGE_KEY, code);
   };
 
   return (
@@ -152,12 +66,8 @@ export function LanguageProvider({
 
 export function useLanguage() {
   const ctx = useContext(LanguageContext);
-
   if (!ctx) {
-    throw new Error(
-      "useLanguage must be used within LanguageProvider"
-    );
+    throw new Error("useLanguage must be used within LanguageProvider");
   }
-
   return ctx;
 }
